@@ -1,40 +1,41 @@
 from flask import Flask, request
 from telegram import Bot, Update
-from telegram.ext import Dispatcher, CommandHandler, MessageHandler, Filters
+from telegram.ext import CommandHandler, MessageHandler, Filters, Dispatcher
 import logging
 import random
 
-# توکن ربات تلگرام شما
+# توکن ربات
 TOKEN = '7876652380:AAHxPYfrN-fkElbhKAP7Ajp1wInw91LRSZ4'
 
-# ایجاد شیء Flask
+# ساخت برنامه Flask
 app = Flask(__name__)
 
-# ایجاد شیء ربات و Dispatcher
+# ساخت ربات
 bot = Bot(token=TOKEN)
-dispatcher = Dispatcher(bot, None, workers=0)
 
-# تنظیمات لاگ
+# لاگر
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# تابع شروع /start
+# دیسپچر دستی
+dispatcher = Dispatcher(bot, None, workers=0, use_context=True)
+
+# هندلر /start
 def start(update, context):
     update.message.reply_text(
         "سلام عموجون!\n\nمنوی کافه:\n- خوبی\n- چخبر\n- دلتنگم\n- دوستت دارم\n- خوابم میاد\n- عمو جون"
     )
 
-# پاسخ به پیام‌ها
+# هندلر پیام‌ها
 def handle_message(update, context):
     text = update.message.text.strip().lower()
 
-    # پاسخ به کلمات
     if "سلام" in text:
         responses = [
             "سلام به روی ماهت عموجون",
             "سلام سلطان!! خوش اومدی",
-            "سلام و صدتا سلام عمو جون",
-            "علیک سلام عمو جون، باد آمد و بوی عنبر آورد"
+            "سلام و صدتا سلام عمو🌹 جون 😍",
+            "علیک سلام عمو جون، باد آمد و بوی عنبر آورد😁😍"
         ]
         update.message.reply_text(random.choice(responses))
 
@@ -47,9 +48,9 @@ def handle_message(update, context):
     elif "عمو جون" in text:
         responses = [
             "جان دلم عمو؟ بگو ببینم چی شده!",
-            "جانم عموجون؟ چیزی میل داری؟",
-            "بفرمایید عموجون، یه قهوه گرم مخصوص شما",
-            "عموجون بفرما بشین، قهوه تازه و داغ با کیک تازه برات بیارم"
+            "جانم عموجون؟ 😍 چیزی میل داری؟",
+            "بفرمایید عموجون، یه قهوه گرم مخصوص شما☕️",
+            "عموجون بفرما بشین،  قهوه تازه و داغ با کیک تازه برات بیارم😁😍"
         ]
         update.message.reply_text(random.choice(responses))
 
@@ -61,24 +62,13 @@ def handle_message(update, context):
 
     elif any(word in text for word in ['خداحافظ', 'خدانگهدار', 'بای']):
         responses = [
-            "خدانگهدار ستون",
+            "خدانگهدار ستون😁🌹",
             "فعلا مواظب خودت باش سلطان ❤"
         ]
         update.message.reply_text(random.choice(responses))
 
     elif any(word in text for word in ['گشنمه', 'گرسنمه']):
         update.message.reply_text("چی میل داری عموجون؟ 😋")
-
-    elif 'منوی کافه' in text or 'منو کافه' in text:
-        keywords = [
-            'سلام', 'چخبر', 'کسی آنلاین نیست', 'عمو جون', 'اصل', 'بیا پیوی', 'بیا پی وی',
-            'خداحافظ', 'خدانگهدار', 'بای', 'گشنمه', 'گرسنمه', 'کافه لاته', 'موهیتو نعنایی',
-            'کافه گلاسه', 'چای لاته', 'هات چاکلت', 'قهوه امریکانو', 'آیس کافی', 'اسموتی توت‌فرنگی',
-            'چای ماسالا', 'لیموناد', 'فرپچینو', 'میلک‌شیک شکلاتی', 'چای سبز لاته', 'آیس تی',
-            'اسموتی موز و بادام', 'قهوه ترک', 'چای ماته', 'شربت زعفران', 'آب پرتقال تازه', 'میلک‌شیک وانیلی'
-        ]
-        update.message.reply_text("کلمات کلیدی منوی کافه:\n- " + '\n- '.join(keywords))
-        return
 
     recipes = {
         'کافه لاته': 'اسپرسو را با شیر گرم مخلوط کنید و روی آن فوم شیر بریزید.',
@@ -108,17 +98,20 @@ def handle_message(update, context):
             update.message.reply_text(recipes[item])
             return
 
-# ثبت هندلرها در Dispatcher
+    if 'منوی کافه' in text or 'منو کافه' in text:
+        keywords = list(recipes.keys())
+        update.message.reply_text("کلمات کلیدی منوی کافه:\n- " + '\n- '.join(keywords))
+
+# اضافه کردن هندلرها به دیسپچر
 dispatcher.add_handler(CommandHandler("start", start))
 dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
 
-# مسیر وب‌هوک
+# روت وب‌هوک
 @app.route('/' + TOKEN, methods=['POST'])
 def webhook():
-    json_str = request.get_data().decode('UTF-8')
-    update = Update.de_json(json_str, bot)
+    update = Update.de_json(request.get_json(force=True), bot)
     dispatcher.process_update(update)
-    return 'OK'
+    return 'ok'
 
 # اجرای برنامه
 if __name__ == '__main__':
